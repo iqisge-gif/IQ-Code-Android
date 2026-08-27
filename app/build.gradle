@@ -1,0 +1,48 @@
+plugins { alias(libs.plugins.android.application) }
+
+def iqgeKeystorePath = System.getenv('IQGE_KEYSTORE')
+def iqgeKeyAlias = System.getenv('IQGE_KEY_ALIAS') ?: 'iqcode-community'
+def iqgeKeystorePassword = System.getenv('IQGE_KEYSTORE_PASSWORD') ?: '2c7d32d701d0843c78c538dd4e25f04d'
+
+android {
+    namespace 'com.iqge'
+    compileSdk rootProject.ext.compileSdkVersion
+    ndkVersion rootProject.ext.iqNdkVersion
+
+    defaultConfig {
+        applicationId 'com.iqge'
+        minSdk rootProject.ext.minSdk
+        targetSdk rootProject.ext.targetSdkVersion
+        versionCode rootProject.ext.versionCode
+        versionName rootProject.ext.versionName
+        ndk { abiFilters 'arm64-v8a' }
+    }
+
+    sourceSets { main.java.exclude 'androidx/annotation/**' }
+
+    signingConfigs {
+        stableDev {
+            storeFile file(iqgeKeystorePath ?: 'signing/iqcode-community.jks')
+            storePassword iqgeKeystorePassword
+            keyAlias iqgeKeyAlias
+            keyPassword iqgeKeystorePassword
+        }
+    }
+    buildTypes {
+        debug { debuggable false; minifyEnabled false; signingConfig signingConfigs.stableDev }
+        release { debuggable false; minifyEnabled false; signingConfig signingConfigs.stableDev }
+    }
+    packagingOptions { jniLibs { useLegacyPackaging true } }
+    androidResources { noCompress 'zip' }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+    lint { abortOnError false; checkReleaseBuilds false }
+    applicationVariants.configureEach { variant ->
+        variant.outputs.configureEach { outputFileName = "IQCode-${variant.buildType.name}.apk" }
+    }
+}
+
+dependencies {
+    implementation project(':Bcore')
+    implementation files('libs/iqcode-termux-compat.jar')
+    compileOnly 'androidx.annotation:annotation:1.8.1'
+}

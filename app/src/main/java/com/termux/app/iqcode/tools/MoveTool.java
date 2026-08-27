@@ -1,0 +1,9 @@
+package com.termux.app.iqcode.tools;
+import com.termux.app.iqcode.model.SessionConfig;import com.termux.app.iqcode.model.ToolExecutionResult;import org.json.JSONObject;import java.io.File;
+public final class MoveTool implements IQTool{
+ public String name(){return "Move";} public String description(){return "Move or rename a file or directory inside the workspace.";}
+ public JSONObject inputSchema(){try{return ToolSchemas.object(new JSONObject().put("source",ToolSchemas.string("Source path.")).put("destination",ToolSchemas.string("Destination path.")).put("overwrite",ToolSchemas.bool("Replace an existing destination file.")),"source","destination");}catch(Exception e){throw new IllegalStateException(e);}}
+ public PermissionKind permissionKind(){return PermissionKind.WRITE;}
+ public ToolExecutionResult execute(SessionConfig c,JSONObject in)throws Exception{File a=PathPolicy.resolve(c.projectDirectory,in.getString("source")),b=PathPolicy.resolve(c.projectDirectory,in.getString("destination"));if(!a.exists())return ToolExecutionResult.error("Source does not exist: "+a);if(a.equals(b))return ToolExecutionResult.error("Source and destination are the same path.");boolean overwrite=in.optBoolean("overwrite",false);if(b.exists()&&!overwrite)return ToolExecutionResult.error("Destination already exists: "+b);if(b.exists()&&!remove(b))return ToolExecutionResult.error("Cannot replace destination: "+b);File p=b.getParentFile();if(p!=null&&!p.exists())p.mkdirs();if(!a.renameTo(b)){CopyTool.copy(a,b,true);if(!remove(a))return ToolExecutionResult.error("Copied destination but could not remove source: "+a);}return ToolExecutionResult.ok("Moved "+a+" -> "+b);}
+ private static boolean remove(File f){if(f.isDirectory()){File[]xs=f.listFiles();if(xs!=null)for(File x:xs)if(!remove(x))return false;}return f.delete();}
+}

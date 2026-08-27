@@ -1,0 +1,8 @@
+package com.termux.app.iqcode.tools;
+import com.termux.app.iqcode.model.*;import com.termux.shared.termux.TermuxConstants;import org.json.*;import java.io.*;import java.nio.charset.StandardCharsets;
+/** Legacy TodoWrite compatibility. New workflows should prefer TaskCreate/TaskUpdate. */
+public final class TodoWriteTool implements IQTool{
+ @Override public String name(){return "TodoWrite";}@Override public String description(){return "Update the legacy IQ Code todo list. Prefer TaskCreate/TaskUpdate for structured tasks.";}@Override public PermissionKind permissionKind(){return PermissionKind.INTERNAL;}
+ @Override public JSONObject inputSchema(){try{JSONObject item=new JSONObject().put("type","object").put("properties",new JSONObject().put("content",ToolSchemas.string("Todo text.")).put("status",ToolSchemas.enumString("Todo status.","pending","in_progress","completed")).put("activeForm",ToolSchemas.string("Present-continuous label."))).put("required",new JSONArray().put("content").put("status"));JSONObject p=new JSONObject().put("todos",new JSONObject().put("type","array").put("items",item));return ToolSchemas.object(p,"todos");}catch(Exception e){throw new IllegalStateException(e);}}
+ @Override public ToolExecutionResult execute(SessionConfig c,JSONObject in)throws Exception{JSONArray a=in.optJSONArray("todos");if(a==null)a=new JSONArray();File f=new File(TermuxConstants.TERMUX_HOME_DIR_PATH,".iq/todos.json");f.getParentFile().mkdirs();try(FileOutputStream o=new FileOutputStream(f,false)){o.write(a.toString(2).getBytes(StandardCharsets.UTF_8));}return ToolExecutionResult.ok("Todo list updated ("+a.length()+" items). Stored at "+f.getAbsolutePath());}
+}

@@ -1,0 +1,10 @@
+package com.termux.app.iqcode.tools;
+
+import com.termux.app.iqcode.model.SessionConfig;import com.termux.app.iqcode.model.ToolExecutionResult;import com.termux.app.iqcode.termux.TermuxShellExecutor;import org.json.JSONObject;import java.io.File;
+public final class ExitWorktreeTool implements IQTool{
+ private final TermuxShellExecutor shell;public ExitWorktreeTool(TermuxShellExecutor shell){this.shell=shell;}
+ @Override public String name(){return "ExitWorktree";}@Override public String description(){return "Leave the current IQ worktree and return to the original project. Clean worktrees are removed automatically; changed worktrees can be kept.";}@Override public PermissionKind permissionKind(){return PermissionKind.SHELL;}
+ @Override public JSONObject inputSchema(){JSONObject p=new JSONObject();try{p.put("keep",ToolSchemas.bool("Keep the worktree even if clean or after changes."));}catch(Exception e){throw new IllegalStateException(e);}return ToolSchemas.object(p);}
+ @Override public ToolExecutionResult execute(SessionConfig c,JSONObject in)throws Exception{String wt=c.worktreePath==null?"":c.worktreePath;String root=c.worktreeOriginalDirectory==null?"":c.worktreeOriginalDirectory;if(wt.isEmpty())return ToolExecutionResult.ok("Not currently in a IQ worktree.");boolean keep=in.optBoolean("keep",false);TermuxShellExecutor.Result dirty=shell.execute("git status --porcelain",wt,30000);String changes=dirty.combined().trim();String note;if(!keep&&dirty.exitCode==0&&changes.isEmpty()){TermuxShellExecutor.Result rm=shell.execute("git -C "+q(root)+" worktree remove --force "+q(wt),root,60000);note=rm.exitCode==0?"Clean worktree removed.":"Returned to project, but worktree cleanup failed: "+rm.combined();}else note=(changes.isEmpty()?"Worktree kept.":"Worktree has changes and was kept: "+wt);c.projectDirectory=new File(root).isDirectory()?root:c.projectDirectory;c.worktreePath="";c.worktreeOriginalDirectory="";return ToolExecutionResult.ok("Exited worktree. Active project: "+c.projectDirectory+"\n"+note);}
+ private static String q(String s){return "'"+s.replace("'","'\\''")+"'";}
+}
